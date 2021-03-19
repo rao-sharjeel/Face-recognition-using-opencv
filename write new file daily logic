@@ -1,0 +1,4 @@
+# if filename[0:10] == str(datetime.date.today()):
+    #     mode = 'w'
+# else:
+    #     mode = "a"
