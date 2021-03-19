@@ -1,0 +1,15 @@
+def mark_attendance(name):
+    file_name = str(datetime.date.today()) + ' known faces.csv'
+    if date != datetime.datetime.today():
+        mode = 'w'
+        f = open(file_name, mode)
+    myDataList = list(pd.read_csv(file_name))
+    nameList = []
+    for line in myDataList:
+        entry = line.split(',')
+        nameList.append(entry[0])
+    if name not in nameList:
+       now = datetime.datetime.now()
+       dtString = now.strftime('%H:%M:%S')
+       cities = pd.DataFrame([['Sacramento', 'California'], ['Miami', 'Florida']], columns=['City', 'State'])
+       cities.to_csv(file_name)
