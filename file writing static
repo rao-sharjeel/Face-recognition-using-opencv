@@ -1,0 +1,103 @@
+import face_recognition
+import os
+import cv2
+import pandas as pd
+import csv
+import datetime
+
+date = str(datetime.datetime.today())
+file_name = str(datetime.date.today()) + ' known faces.csv'
+KNOWN_FACES_DIR = 'known_faces'
+TOLERANCE = 0.5
+FRAME_THICKNESS = 3
+FONT_THICKNESS = 2
+MODEL = 'hog'  # default: 'hog', other one can be 'cnn' - CUDA accelerated (if available) deep-learning pretrained model
+mode = 'a'
+
+video = cv2.VideoCapture(0)
+
+print('Loading known faces...')
+known_faces = []
+known_names = []
+
+
+def name_to_color(name):
+    color = [(ord(c.lower())-97)*8 for c in name[:3]]
+    return color
+
+
+def draw_square(face_location, match):
+    top_left = (face_location[3], face_location[0])
+    bottom_right = (face_location[1], face_location[2])
+    color = name_to_color(match)
+    cv2.rectangle(image, top_left, bottom_right, color, FRAME_THICKNESS)
+
+
+def draw_name(face_location, match):
+    top_left = (face_location[3], face_location[2])
+    bottom_right = (face_location[1], face_location[2] + 22)
+    color = name_to_color(match)
+    cv2.rectangle(image, top_left, bottom_right, color, cv2.FILLED)
+    cv2.putText(image, match, (face_location[3] + 10, face_location[2] + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+                (200, 200, 200), FONT_THICKNESS)
+
+
+def mark_attendance(name, file_name_loc):
+    if not os.path.exists(file_name_loc):
+        global file_name
+        file_name = str(datetime.date.today()) + ' known faces.csv'
+        print('we in here')
+        global date
+        date = datetime.date.today()
+        with open(file_name, 'w') as f1:
+            pass
+    with open(file_name, 'r+') as f:
+        myDataList = f.readlines()
+        nameList = []
+        for line in myDataList:
+            entry = line.split(',')
+            nameList.append(entry[0])
+        if name not in nameList:
+            now = datetime.datetime.now()
+            dtString = now.strftime('%H:%M:%S')
+            f.writelines(f'\n{name},{dtString}')
+
+
+for name in os.listdir(KNOWN_FACES_DIR):
+
+    for filename in os.listdir(f'{KNOWN_FACES_DIR}/{name}'):
+        image = face_recognition.load_image_file(f'{KNOWN_FACES_DIR}/{name}/{filename}')
+        encoding = face_recognition.face_encodings(image)[0]
+        known_faces.append(encoding)
+        known_names.append(name)
+
+print('Encoding complete! ')
+
+while True:
+    ret, image = video.read()
+    locations = face_recognition.face_locations(image, model=MODEL)
+    encodings = face_recognition.face_encodings(image, locations)
+    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+
+    print(f', found {len(encodings)} face(s)')
+    for face_encoding, face_location in zip(encodings, locations):
+        results = face_recognition.compare_faces(known_faces, face_encoding, TOLERANCE)
+        match = None
+
+        if True in results:  # If at least one is true, get a name of first of found labels
+            match = known_names[results.index(True)]
+            print(f' - {match} from {results}')
+            mark_attendance(match, file_name)
+
+        else:
+            match = "unknown"
+
+        draw_square(face_location, match)
+        draw_name(face_location, match)
+
+    cv2.imshow(filename, cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+    if cv2.waitKey(1) & 0xFF == ord("q"):
+        break
+
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
